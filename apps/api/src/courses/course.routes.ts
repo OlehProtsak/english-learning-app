@@ -1,26 +1,34 @@
 import { Router } from "express";
-import { courses } from "./course.data.js";
+import { pool } from "../config/database.js";
 
 export const courseRouter = Router();
 
-courseRouter.get("/", (req, res) => {
-  res.json(courses);
+courseRouter.get("/", async (req, res) => {
+  const result = await pool.query(
+    "SELECT id, title, description, level FROM courses",
+  );
+
+  return res.json(result.rows);
 });
 
-courseRouter.get("/:id", (req, res) => {
+courseRouter.get("/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
     return res.status(400).json({
       message: "Invalid course ID",
     });
   }
-  const course = courses.find((el) => el.id === id);
 
-  if (!course) {
+  const result = await pool.query(
+    "SELECT id, title, description, level FROM courses WHERE id = $1",
+    [id],
+  );
+
+  if (!result.rowCount) {
     return res.status(404).json({
       message: "Course not found",
     });
   }
 
-  return res.json(course);
+  return res.json(result.rows[0]);
 });
