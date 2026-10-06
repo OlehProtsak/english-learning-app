@@ -4,11 +4,19 @@ import { pool } from "../config/database.js";
 export const courseRouter = Router();
 
 courseRouter.get("/", async (req, res) => {
-  const result = await pool.query(
-    "SELECT id, title, description, level FROM courses",
-  );
+  try {
+    const result = await pool.query(
+      "SELECT id, title, description, level FROM courses",
+    );
 
-  return res.json(result.rows);
+    return res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
 });
 
 courseRouter.get("/:id", async (req, res) => {
@@ -19,16 +27,24 @@ courseRouter.get("/:id", async (req, res) => {
     });
   }
 
-  const result = await pool.query(
-    "SELECT id, title, description, level FROM courses WHERE id = $1",
-    [id],
-  );
+  try {
+    const result = await pool.query(
+      "SELECT id, title, description, level FROM courses WHERE id = $1",
+      [id],
+    );
 
-  if (!result.rowCount) {
-    return res.status(404).json({
-      message: "Course not found",
+    if (!result.rowCount) {
+      return res.status(404).json({
+        message: "Course not found",
+      });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal server error",
     });
   }
-
-  return res.json(result.rows[0]);
 });
