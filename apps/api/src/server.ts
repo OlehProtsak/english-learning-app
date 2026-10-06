@@ -12,7 +12,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/courses", courseRouter);
-app.use("/api/courses", lessonRouter);
+app.use("/api/lessons", lessonRouter);
 
 app.listen(PORT, () => {
   console.log(`API is running on http://localhost:${PORT}`);

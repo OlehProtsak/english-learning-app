@@ -3,21 +3,28 @@ import { pool } from "../config/database.js";
 
 export const lessonRouter = Router();
 
-lessonRouter.get("/:courseId/lessons", async (req, res) => {
-  const courseId = Number(req.params.courseId);
-  if (!Number.isInteger(courseId) || courseId <= 0) {
+lessonRouter.get("/:lessonId", async (req, res) => {
+  const lessonId = Number(req.params.lessonId);
+
+  if (!Number.isInteger(lessonId) || lessonId <= 0) {
     return res.status(400).json({
-      message: "Invalid course ID",
+      message: "Invalid lesson ID",
     });
   }
 
   try {
     const result = await pool.query(
-      "SELECT id, course_id, title, content FROM lessons WHERE course_id = $1",
-      [courseId],
+      "SELECT id, course_id, title, content FROM lessons WHERE id = $1",
+      [lessonId],
     );
 
-    return res.json(result.rows);
+    if (!result.rowCount) {
+      return res.status(404).json({
+        message: "Lesson not found",
+      });
+    }
+
+    return res.json(result.rows[0]);
   } catch (error) {
     console.error(error);
 
