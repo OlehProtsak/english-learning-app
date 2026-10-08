@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../config/database.js";
+import { createCourseSchema } from "./course.schema.js";
 
 export const courseRouter = Router();
 
@@ -64,6 +65,41 @@ courseRouter.get("/:courseId/lessons", async (req, res) => {
     );
 
     return res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+});
+
+courseRouter.post("/", async (req, res) => {
+  const validationResult = createCourseSchema.safeParse(req.body);
+
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => {
+      return {
+        field: issue.path.join("."),
+        message: issue.message,
+      };
+    });
+
+    return res.status(400).json({
+      message: "Invalid course data",
+      errors,
+    });
+  }
+
+  const { title, description, level } = validationResult.data;
+
+  try {
+    const result = await pool.query(
+      "INSERT INTO courses (title, description, level) VALUES ($1, $2, $3) RETURNING id, title, description, level",
+      [title, description, level],
+    );
+
+    return res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error(error);
 
