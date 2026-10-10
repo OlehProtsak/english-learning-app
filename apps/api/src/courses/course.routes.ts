@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { pool } from "../config/database.js";
-import { createCourseSchema } from "./course.schema.js";
+import { createCourseSchema, updateCourseSchema } from "./course.schema.js";
 
 export const courseRouter = Router();
 
@@ -100,6 +100,64 @@ courseRouter.post("/", async (req, res) => {
     );
 
     return res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+});
+
+courseRouter.patch("/:courseId", async (req, res) => {
+  const courseId = Number(req.params.courseId);
+
+  if (!Number.isInteger(courseId) || courseId <= 0) {
+    return res.status(400).json({
+      message: "Invalid course ID",
+    });
+  }
+
+  const validationResult = updateCourseSchema.safeParse(req.body);
+
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => {
+      return {
+        field: issue.path.join("."),
+        message: issue.message,
+      };
+    });
+
+    return res.status(400).json({
+      message: "Invalid course data",
+      errors,
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE courses
+       SET
+          title = COALESCE($1, title),
+          description = COALESCE($2, description),
+          level = COALESCE($3, level)
+       WHERE id = $4
+       RETURNING id, title, description, level`,
+      [
+        validationResult.data.title ?? null,
+        validationResult.data.description ?? null,
+        validationResult.data.level ?? null,
+        courseId,
+      ],
+    );
+
+    if (!result.rowCount) {
+      return res.status(404).json({
+        message: "Course not found",
+      });
+    }
+
+    return res.json(result.rows[0]);
   } catch (error) {
     console.error(error);
 
