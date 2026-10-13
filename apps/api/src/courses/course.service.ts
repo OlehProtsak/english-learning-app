@@ -1,15 +1,18 @@
 import { pool } from "../config/database.js";
+import { Course, Level } from "./course.types.js";
 
-export const getAllCourses = async () => {
-  const result = await pool.query(
+export const getAllCourses = async (): Promise<Course[]> => {
+  const result = await pool.query<Course>(
     "SELECT id, title, description, level FROM courses",
   );
 
   return result.rows;
 };
 
-export const getCourseById = async (id: number) => {
-  const result = await pool.query(
+export const getCourseById = async (
+  id: number,
+): Promise<Course | undefined> => {
+  const result = await pool.query<Course>(
     `
     SELECT id, title, description, level
     FROM courses
@@ -24,9 +27,9 @@ export const getCourseById = async (id: number) => {
 export const createCourse = async (
   title: string,
   description: string,
-  level: string,
-) => {
-  const result = await pool.query(
+  level: Level,
+): Promise<Course> => {
+  const result = await pool.query<Course>(
     `
     INSERT INTO courses(title, description, level)
     VALUES ($1, $2, $3)
@@ -42,9 +45,9 @@ export const updateCourse = async (
   id: number,
   title: string | undefined,
   description: string | undefined,
-  level: string | undefined,
-) => {
-  const result = await pool.query(
+  level: Level | undefined,
+): Promise<Course | undefined> => {
+  const result = await pool.query<Course>(
     `
     UPDATE courses
     SET 
@@ -52,7 +55,7 @@ export const updateCourse = async (
       description = COALESCE($2, description),
       level = COALESCE($3, level)
     WHERE id = $4
-    RETURNING id, title, description, level  
+    RETURNING id, title, description, level
     `,
     [title ?? null, description ?? null, level ?? null, id],
   );
@@ -60,8 +63,8 @@ export const updateCourse = async (
   return result.rows[0];
 };
 
-export const deleteCourse = async (id: number) => {
-  const result = await pool.query(
+export const deleteCourse = async (id: number): Promise<Course | undefined> => {
+  const result = await pool.query<Course>(
     `
     DELETE FROM courses
     WHERE id = $1
