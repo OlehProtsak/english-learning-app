@@ -1,7 +1,10 @@
 import { pool } from "../config/database.js";
+import { Lesson } from "./lesson.types.js";
 
-export const getLessonById = async (id: number) => {
-  const result = await pool.query(
+export const getLessonById = async (
+  id: number,
+): Promise<Lesson | undefined> => {
+  const result = await pool.query<Lesson>(
     `
     SELECT id, course_id AS "courseId", title, content
     FROM lessons
@@ -17,8 +20,8 @@ export const createLesson = async (
   courseId: number,
   title: string,
   content: string,
-) => {
-  const result = await pool.query(
+): Promise<Lesson> => {
+  const result = await pool.query<Lesson>(
     `
     INSERT INTO lessons (course_id, title, content)
     VALUES ($1, $2, $3)
@@ -35,8 +38,8 @@ export const updateLesson = async (
   courseId: number | undefined,
   title: string | undefined,
   content: string | undefined,
-) => {
-  const result = await pool.query(
+): Promise<Lesson | undefined> => {
+  const result = await pool.query<Lesson>(
     `
     UPDATE lessons
     SET
@@ -52,8 +55,10 @@ export const updateLesson = async (
   return result.rows[0];
 };
 
-export const deleteLesson = async (lessonId: number) => {
-  const result = await pool.query(
+export const deleteLesson = async (
+  lessonId: number,
+): Promise<Lesson | undefined> => {
+  const result = await pool.query<Lesson>(
     `
     DELETE FROM lessons
     WHERE id = $1
