@@ -1,8 +1,13 @@
 import { Router } from "express";
 import { DatabaseError } from "pg";
 
-import { pool } from "../config/database.js";
 import { createLessonSchema, updateLessonSchema } from "./lesson.schema.js";
+import {
+  createLesson,
+  updateLesson,
+  deleteLesson,
+  getLessonById,
+} from "./lesson.service.js";
 
 export const lessonRouter = Router();
 
@@ -16,18 +21,15 @@ lessonRouter.get("/:lessonId", async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
-      "SELECT id, course_id, title, content FROM lessons WHERE id = $1",
-      [lessonId],
-    );
+    const lesson = await getLessonById(lessonId);
 
-    if (!result.rowCount) {
+    if (!lesson) {
       return res.status(404).json({
         message: "Lesson not found",
       });
     }
 
-    return res.json(result.rows[0]);
+    return res.json(lesson);
   } catch (error) {
     console.error(error);
 
@@ -57,16 +59,9 @@ lessonRouter.post("/", async (req, res) => {
   const { courseId, title, content } = validationResult.data;
 
   try {
-    const result = await pool.query(
-      `
-      INSERT INTO lessons (course_id, title, content)
-      VALUES ($1, $2, $3)
-      RETURNING id, course_id AS "courseId", title, content
-      `,
-      [courseId, title, content],
-    );
+    const lesson = await createLesson(courseId, title, content);
 
-    return res.status(201).json(result.rows[0]);
+    return res.status(201).json(lesson);
   } catch (error) {
     if (error instanceof DatabaseError && error.code === "23503") {
       return res.status(404).json({
@@ -109,26 +104,15 @@ lessonRouter.patch("/:lessonId", async (req, res) => {
   const { courseId, title, content } = validationResult.data;
 
   try {
-    const result = await pool.query(
-      `
-      UPDATE lessons
-      SET
-        course_id = COALESCE($1, course_id),
-        title = COALESCE($2, title),
-        content = COALESCE($3, content)
-      WHERE id = $4
-      RETURNING id, course_id AS "courseId", title, content;
-      `,
-      [courseId ?? null, title ?? null, content ?? null, lessonId],
-    );
+    const lesson = await updateLesson(lessonId, courseId, title, content);
 
-    if (!result.rowCount) {
+    if (!lesson) {
       return res.status(404).json({
         message: "Lesson not found",
       });
     }
 
-    return res.json(result.rows[0]);
+    return res.json(lesson);
   } catch (error) {
     if (error instanceof DatabaseError && error.code === "23503") {
       return res.status(404).json({
@@ -153,21 +137,15 @@ lessonRouter.delete("/:lessonId", async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
-      `DELETE FROM lessons
-       WHERE id = $1
-       RETURNING id, course_id AS "courseId", title, content
-      `,
-      [lessonId],
-    );
+    const lesson = await deleteLesson(lessonId);
 
-    if (!result.rowCount) {
+    if (!lesson) {
       return res.status(404).json({
         message: "Lesson not found",
       });
     }
 
-    return res.json(result.rows[0]);
+    return res.json(lesson);
   } catch (error) {
     console.error(error);
 
