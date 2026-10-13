@@ -30,7 +30,13 @@ export const createLesson = async (
     [courseId, title, content],
   );
 
-  return result.rows[0];
+  const lesson = result.rows[0];
+
+  if (!lesson) {
+    throw new Error("Failed to create lesson");
+  }
+
+  return lesson;
 };
 
 export const updateLesson = async (

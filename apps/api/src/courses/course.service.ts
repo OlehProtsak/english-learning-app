@@ -38,7 +38,13 @@ export const createCourse = async (
     [title, description, level],
   );
 
-  return result.rows[0];
+  const course = result.rows[0];
+
+  if (!course) {
+    throw new Error("Failed to create course");
+  }
+
+  return course;
 };
 
 export const updateCourse = async (
