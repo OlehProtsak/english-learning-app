@@ -14,17 +14,9 @@ import {
 export const courseRouter = Router();
 
 courseRouter.get("/", async (req, res) => {
-  try {
-    const courses = await getAllCourses();
+  const courses = await getAllCourses();
 
-    return res.json(courses);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
+  return res.json(courses);
 });
 
 courseRouter.get("/:id", async (req, res) => {
@@ -35,23 +27,15 @@ courseRouter.get("/:id", async (req, res) => {
     });
   }
 
-  try {
-    const course = await getCourseById(id);
+  const course = await getCourseById(id);
 
-    if (!course) {
-      return res.status(404).json({
-        message: "Course not found",
-      });
-    }
-
-    return res.json(course);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Internal server error",
+  if (!course) {
+    return res.status(404).json({
+      message: "Course not found",
     });
   }
+
+  return res.json(course);
 });
 
 courseRouter.get("/:courseId/lessons", async (req, res) => {
@@ -62,17 +46,17 @@ courseRouter.get("/:courseId/lessons", async (req, res) => {
     });
   }
 
-  try {
-    const lessons = await getLessonsByCourseId(courseId);
+  const course = await getCourseById(courseId);
 
-    return res.json(lessons);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Internal server error",
+  if (!course) {
+    return res.status(404).json({
+      message: "Course not found",
     });
   }
+
+  const lessons = await getLessonsByCourseId(courseId);
+
+  return res.json(lessons);
 });
 
 courseRouter.post("/", async (req, res) => {
@@ -94,17 +78,9 @@ courseRouter.post("/", async (req, res) => {
 
   const { title, description, level } = validationResult.data;
 
-  try {
-    const course = await createCourse(title, description, level);
+  const course = await createCourse(title, description, level);
 
-    return res.status(201).json(course);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
+  return res.status(201).json(course);
 });
 
 courseRouter.patch("/:courseId", async (req, res) => {
@@ -134,26 +110,18 @@ courseRouter.patch("/:courseId", async (req, res) => {
 
   const { title, description, level } = validationResult.data;
 
-  try {
-    const course = await updateCourse(courseId, title, description, level);
+  const course = await updateCourse(courseId, title, description, level);
 
-    if (!course) {
-      return res.status(404).json({
-        message: "Course not found",
-      });
-    }
-
-    return res.json(course);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Internal server error",
+  if (!course) {
+    return res.status(404).json({
+      message: "Course not found",
     });
   }
+
+  return res.json(course);
 });
 
-courseRouter.delete("/:courseId", async (req, res) => {
+courseRouter.delete("/:courseId", async (req, res, next) => {
   const courseId = Number(req.params.courseId);
 
   if (!Number.isInteger(courseId) || courseId <= 0) {
@@ -175,13 +143,10 @@ courseRouter.delete("/:courseId", async (req, res) => {
   } catch (error) {
     if (error instanceof DatabaseError && error.code === "23503") {
       return res.status(409).json({
-        message: "Cannot delete a course that has lessons",
+        message: "Cannot delete course because it has lessons",
       });
     }
-    console.error(error);
 
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    next(error);
   }
 });

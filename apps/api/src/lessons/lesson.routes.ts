@@ -20,26 +20,18 @@ lessonRouter.get("/:lessonId", async (req, res) => {
     });
   }
 
-  try {
-    const lesson = await getLessonById(lessonId);
+  const lesson = await getLessonById(lessonId);
 
-    if (!lesson) {
-      return res.status(404).json({
-        message: "Lesson not found",
-      });
-    }
-
-    return res.json(lesson);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Internal server error",
+  if (!lesson) {
+    return res.status(404).json({
+      message: "Lesson not found",
     });
   }
+
+  return res.json(lesson);
 });
 
-lessonRouter.post("/", async (req, res) => {
+lessonRouter.post("/", async (req, res, next) => {
   const validationResult = createLessonSchema.safeParse(req.body);
 
   if (!validationResult.success) {
@@ -68,15 +60,12 @@ lessonRouter.post("/", async (req, res) => {
         message: "Course not found",
       });
     }
-    console.error(error);
 
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    next(error);
   }
 });
 
-lessonRouter.patch("/:lessonId", async (req, res) => {
+lessonRouter.patch("/:lessonId", async (req, res, next) => {
   const lessonId = Number(req.params.lessonId);
 
   if (!Number.isInteger(lessonId) || lessonId <= 0) {
@@ -119,11 +108,8 @@ lessonRouter.patch("/:lessonId", async (req, res) => {
         message: "Course not found",
       });
     }
-    console.error(error);
 
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    next(error);
   }
 });
 
@@ -136,21 +122,13 @@ lessonRouter.delete("/:lessonId", async (req, res) => {
     });
   }
 
-  try {
-    const lesson = await deleteLesson(lessonId);
+  const lesson = await deleteLesson(lessonId);
 
-    if (!lesson) {
-      return res.status(404).json({
-        message: "Lesson not found",
-      });
-    }
-
-    return res.json(lesson);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Internal server error",
+  if (!lesson) {
+    return res.status(404).json({
+      message: "Lesson not found",
     });
   }
+
+  return res.json(lesson);
 });
