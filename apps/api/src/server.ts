@@ -1,24 +1,6 @@
-import express from "express";
+import { app } from "./app.js";
 
-import { courseRouter } from "./courses/course.routes.js";
-import { lessonRouter } from "./lessons/lesson.routes.js";
-import { errorHandler } from "./middleware/errorHandler.js";
-
-const app = express();
 const PORT = 3000;
-
-app.use(express.json());
-
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-  });
-});
-
-app.use("/api/courses", courseRouter);
-app.use("/api/lessons", lessonRouter);
-
-app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`API is running on http://localhost:${PORT}`);
