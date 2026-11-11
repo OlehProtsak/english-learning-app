@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import { app } from "./app.js";
+import { DatabaseError } from "pg-protocol";
 
 import type { Course } from "./courses/course.types.js";
 
@@ -16,6 +17,7 @@ vi.mock("./courses/course.service.js", async (importOriginal) => {
     createCourse: vi.fn(),
     getAllCourses: vi.fn(),
     updateCourse: vi.fn(),
+    deleteCourse: vi.fn(),
   };
 });
 
@@ -74,7 +76,7 @@ describe("GET /api/courses/:id", () => {
   });
 
   it("should return 500 when the course service fails", async () => {
-    vi.mocked(courseService.getCourseById).mockRejectedValue(
+    vi.mocked(courseService.getCourseById).mockRejectedValueOnce(
       new Error("Database connection failed"),
     );
 
@@ -188,7 +190,7 @@ describe("POST /api/courses", () => {
 
     const { title, description, level } = validCourse;
 
-    vi.mocked(courseService.createCourse).mockRejectedValue(
+    vi.mocked(courseService.createCourse).mockRejectedValueOnce(
       new Error("Database connection failed"),
     );
 
@@ -241,7 +243,7 @@ describe("GET /api/courses", () => {
   });
 
   it("should return 500 when fetching courses fails", async () => {
-    vi.mocked(courseService.getAllCourses).mockRejectedValue(
+    vi.mocked(courseService.getAllCourses).mockRejectedValueOnce(
       new Error("Database connection failed"),
     );
 
@@ -356,7 +358,7 @@ describe("PATCH /api/courses/:courseId", () => {
   });
 
   it("should return 500 when updating a course fails", async () => {
-    vi.mocked(courseService.updateCourse).mockRejectedValue(
+    vi.mocked(courseService.updateCourse).mockRejectedValueOnce(
       new Error("Database connection failed"),
     );
 
@@ -374,5 +376,72 @@ describe("PATCH /api/courses/:courseId", () => {
       undefined,
       undefined,
     );
+  });
+});
+
+describe("DELETE /api/courses/:courseId", () => {
+  it("should return 400 when the course ID is invalid", async () => {
+    const response = await request(app).delete("/api/courses/abc");
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Invalid course ID");
+    expect(courseService.deleteCourse).not.toHaveBeenCalled();
+  });
+
+  it("should return 404 when the course does not exist", async () => {
+    vi.mocked(courseService.deleteCourse).mockResolvedValue(undefined);
+    const response = await request(app).delete("/api/courses/999");
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe("Course not found");
+    expect(courseService.deleteCourse).toHaveBeenCalledExactlyOnceWith(999);
+  });
+
+  it("should return 200 when the course successfully deleted", async () => {
+    const deletedCourse = {
+      id: 1,
+      title: "Updated Title",
+      description: "Beginner course",
+      level: "A1" as const,
+    };
+    vi.mocked(courseService.deleteCourse).mockResolvedValue(deletedCourse);
+    const response = await request(app).delete("/api/courses/1");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(deletedCourse);
+    expect(courseService.deleteCourse).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it("should return 409 when deleting a course that has lessons", async () => {
+    const dbError = new DatabaseError(
+      "Foreign key constraint violation",
+      0,
+      "error",
+    );
+
+    dbError.code = "23503";
+
+    vi.mocked(courseService.deleteCourse).mockRejectedValueOnce(dbError);
+    const response = await request(app).delete("/api/courses/1");
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      message: "Cannot delete course because it has lessons",
+    });
+    expect(courseService.deleteCourse).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it("should return 500 when deleting a course fails unexpectedly", async () => {
+    vi.mocked(courseService.deleteCourse).mockRejectedValueOnce(
+      new Error("Database connection failed"),
+    );
+
+    const response = await request(app).delete("/api/courses/1");
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({
+      message: "Internal server error",
+    });
+    expect(courseService.deleteCourse).toHaveBeenCalledExactlyOnceWith(1);
   });
 });
